@@ -1,0 +1,505 @@
+;  /---------------------------------------------------------------------\
+;  |                     C u r v e   F i t   +                           |
+;  |                  with statistical inference                         |
+;  |                                                                     |
+;  |                         for the HP-41                               |
+;  \---------------------------------------------------------------------/
+;
+;				    1.00
+; 
+; ABSTRACT
+; ========
+; 
+; CV+ expands the PPC ROM "CV" program to a bivariate statistical
+; tool.  It extensively uses CV subroutines, and retains the data
+; entry and deletion approach of CV.  But in addition, after fitting
+; a model it makes available: 1) two kinds of confidence intervals
+; (CI) around predictions of y^.  2) A probablilty level (P-value)
+; for the significance of the regression test (F-test).  3) Standard
+; errors and confidence intervals around the parameter b1, b0,
+; x-barover and y-barover. 4) A ANOVA-type decomposition of the sums
+; of squares (SSR, SSE, SSTO, MSE) and some univariate statistics.
+;
+; CV+ calculates approximations to the t and F distributions so that
+; acceptable confidence intervals and P-value are directly estimated
+; without the need for statistical tables.  The user can specif the
+; confidence level desired; otherwise a default of 95% is assumed.
+;
+; HISTORY
+; =======
+;
+; The code originates from PPC Journal [1] by Garry W. Thornburn.  He
+; used calls to PPC ROM Module.   While in college, I didn't own a PPC
+; Module myself and around October 1986, I "borrowed" the "SV"
+; function from the PPC ROM.  It still relies on the  "CV" function
+; (see Curve Fit).
+;
+; INSTRUCTIONS
+; ============
+; 
+; Refer to [1].
+;
+; METHOD
+; ======
+;
+; EXAMPLES
+; ========
+; 
+; Refer to [1]
+;
+; LISTING
+; =======
+;
+; 663 bytes including END; 6 tracks
+; uses registers R00..R42 and flags 01..05,08..10
+
+	01	LBL "CV+"
+	02	RTN
+
+	03	LBL A
+	04	SF 03
+	05	1
+	06	STO 06
+	07	RDN
+	08	XEQ "CV"
+	09	RTN
+
+	10	LBL a
+	11	SF 03
+	12	SF 10
+	13	6
+	14	STO 06
+	15	RDN
+	16	XEQ "CV"
+	17	RTN
+	18	LBL D
+	19	4
+	20	STO 06
+	21	RDN
+	22	XEQ "CV"
+	23	RTN
+	24	LBL e
+	25	.95
+	26	STO 02
+	27	CF 02
+	28	SF 03
+	29	0
+	30	STO 06
+	31	XEQ "CV"
+	32	"INIT"		; added
+	33	AVIEW		;
+	34	TONE 9		;
+	35	RTN
+
+	36	LBL B
+	37	1
+	38	X>Y?
+	39	RTN
+	40	RDN
+	41	4
+	42	X<Y?
+	43	RTN
+	44	2
+	45	X<> Z
+	46	STO 00
+	47	FS?C 03
+	48	XEQ 03
+	49	2
+	50	STO 06
+	51	RCL 00
+	52	XEQ "CV"
+	53	GTO 08
+
+	54	LBL 03
+	55	"TF"
+	56	ASTO 06
+	57	FIX 3
+	58	SF 02
+	59	SF 05
+	60	CF 04
+	61	LBL 07
+	62	0
+	63	ENTER^
+	64	2
+	65	XEQ "SV"		; PPC ROM function
+	66	FS? 05
+	67	STO 03
+	68	STO 01
+	69	FS?C 05
+	70	GTO 07
+	71	CF 02
+	72	RTN
+
+	73	LBL b
+	74	"C-LVL?"
+	75	PROMPT
+	76	STO 02
+	77	SF 03
+	78	RTN
+
+	79	LBL E
+	80	FS?C 03
+	81	XEQ 03
+	82	5
+	83	STO 06
+	84	RDN
+	85	XEQ "CV"
+
+	86	LBL 08
+	87	RCL 07
+	88	8
+	89	+
+	90	STO 06
+	91	XEQ "CV"
+	92	sREG 13
+	93	RCL 14
+	94	RCL 13
+	95	X^2
+	96	RCL 18
+	97	/
+	98	-
+	99	STO 00
+	100	RCL 16
+	101	RCL 09
+	102	FS? 08
+	103	LN
+	104	RCL 15
+	105	*
+	106	-
+	107	RCL 08
+	108	RCL 17
+	109	*
+	110	-
+	111	STO 31
+	112	RCL 18
+	113	2
+	114	-
+	115	/
+	116	STO 32
+	117	RCL 08
+	118	X^2
+	119	RCL 00
+	120	*
+	121	STO 33
+	122	RCL 16
+	123	RCL 18
+	124	R^
+	125	R^
+	126	MEAN
+	127	STO 39
+	128	RDN
+	129	X^2
+	130	*
+	131	-
+	132	STO 34
+	133	RCL 32
+	134	RCL 00
+	135	/
+	136	SQRT
+	137	STO 35
+	138	RCL 32
+	139	RCL 18
+	140	/
+	141	RCL 14
+	142	*
+	143	RCL 00
+	144	/
+	145	SQRT
+	146	FS? 08
+	147	E^X
+	148	STO 36
+	149	SDEV
+	150	STO 40
+	151	XEQ "CV"
+	152	MEAN
+	153	STO 27
+	154	RDN
+	155	STO 28
+	156	SDEV
+	157	STO 29
+	158	RDN
+	159	STO 30
+	160	R^
+	161	RCL 18
+	162	SQRT
+	163	/
+	164	STO 37
+	165	RDN
+	166	LASTX
+	167	/
+	168	STO 38
+	169	"MODEL "
+	170	FIX 0
+	171	ARCL 07
+	172	AVIEW
+	173	FIX 3
+	174	TONE 9
+	175	RTN
+
+	176	LBL d
+	177	RCL 01
+	178	RCL 35
+	179	RCL 08
+	180	LBL 02
+	181	STOP
+	182	FS? 03
+	183	GTO 09
+	184	STO T
+	185	RDN
+	186	*
+	187	+
+	188	STOP
+	189	RDN
+	190	LASTX
+	191	-
+	192	STOP
+	193	RTN
+
+	194	LBL H
+	195	RCL 01
+	196	RCL 37
+	197	RCL 27
+	198	GTO 02
+	199	LBL I
+	200	RCL 01
+	201	RCL 38
+	202	RCL 28
+	203	GTO 02
+
+	204	LBL c
+	205	RCL 09
+	206	STOP
+	207	FS? 08
+	208	LN
+	209	ENTER^
+	210	ENTER^
+	211	RCL 01
+	212	RCL 36
+	213	FS? 08
+	214	LN
+	215	*
+	216	LBL 01
+	217	FS? 03
+	218	GTO 09
+	219	STO T
+	220	+
+	221	LASTX
+	222	ST- Z
+	223	RDN
+	224	FS? 08
+	225	E^X
+	226	STOP
+	227	RDN
+	228	FS? 08
+	229	E^X
+	230	STOP
+	231	RTN
+
+	232	LBL F
+	233	RCL 33
+	234	RCL 32
+	235	/
+	236	STO 41
+	237	SF 05
+	238	SF 04
+	239	XEQ "TF"
+	240	CF 05
+	241	CF 04
+	242	RDN
+	243	"P="
+	244	ARCL X
+	245	AVIEW
+	246	RTN
+
+	247	LBL C
+	248	3
+	249	STO 06
+	250	RDN
+	251	STO 04
+	252	XEQ "CV"
+	253	STO 05
+	254	STOP
+	255	RCL 04
+	256	2
+	257	RCL 07
+	258	X<=Y?
+	259	GTO 00
+	260	X<> Z
+	261	LN
+	262	X<> Z
+	263	LBL 00
+	264	X<> Z
+	265	RCL 39
+	266	-
+	267	X^2
+	268	RCL 18
+	269	1
+	270	-
+	271	RCL 40
+	272	X^2
+	273	*
+	274	/
+	275	RCL 18
+	276	1/X
+	277	+
+	278	FC? 01
+	279	1
+	280	FC? 01
+	281	+
+	282	SQRT
+	283	RCL 32
+	284	SQRT
+	285	*
+	286	RCL 03
+	287	*
+	288	RCL 05
+	289	FS? 08
+	290	LN
+	291	ENTER^
+	292	ENTER^
+	293	X<> T
+	294	GTO 01
+
+	295	LBL "TF"
+	296	STO 42
+	297	2
+	298	ENTER^
+	299	9
+	300	/
+	301	STO 05
+	302	RCL 18
+	303	FS? 05
+	304	2
+	305	FC? 05
+	306	1
+	307	-
+	308	1/X
+	309	*
+	310	STO 04
+	311	RDN
+	312	FS? 04
+	313	2
+	314	FC? 14
+	315	4
+	316	ENTER^
+	317	3
+	318	/
+	319	Y^X
+	320	RCL 04
+	321	*
+	322	RCL 05
+	323	+
+	324	SQRT
+	325	1/X
+	326	RCL 42
+	327	FS? 04
+	328	1
+	329	FC? 04
+	330	2
+	331	ENTER^
+	332	3
+	333	/
+	334	Y^X
+	335	RCL 04
+	336	1
+	337	-
+	338	CHS
+	339	*
+	340	RCL 05
+	341	1
+	342	-
+	343	+
+	344	*
+	345	XEQ 05
+	346	FS? 04
+	347	2
+	348	FC? 04
+	349	4
+	350	/
+	351	FS? 04
+	352	RTN
+	353	RCL 02
+	354	1
+	355	-
+	356	2
+	357	/
+	358	+
+	359	RTN
+
+	360	LBL 05
+	361	STO 04
+	362	.019527
+	363	*
+	364	.000394
+	365	+
+	366	RCL 04
+	367	*
+	368	.115194
+	369	+
+	370	RCL 04
+	371	*
+	372	.196854
+	373	+
+	374	RCL 04
+	375	*
+	376	1
+	377	+
+	378	4
+	379	Y^X
+	380	1/X
+	381	RTN
+
+	382	LBL 09
+	383	TONE 9		; minor change
+	384	TONE 9		;
+	385	"XEQ B FIRST"
+	386	AVIEW
+	387	RTN
+
+	388	LBL "SV"	; from PPC ROM "SV - Solve Routine"
+	389	STO 07
+	390	 E
+	391	%
+	392	RCL Z
+	393	X=0?
+	394	X<>Y
+	395	STO 09
+	396	CLST
+	397	LBL 04
+	398	RCL Z
+	399	STO 08
+	400	RCL 07
+	401	FS? 10
+	402	VIEW X
+	403	XEQ IND 06
+	404	ST* 09
+	405	ST- 08
+	406	RCL 09
+	407	RCL 08
+	408	X#0?
+	409	/
+	410	STO 09
+	411	X<> 07
+	412	ST+ 07
+	413	RND
+	414	RCL 07
+	415	RND
+	416	X#Y?
+	417	GTO 04
+	418	RCL 07
+	419	RTN
+	420	END 
+
+; REFERENCES
+; ==========
+;
+; [1] CV+ CURVE FITTING WITH STATISTICAL INFERENCE
+;     Garry W. Thornburn, March 1983
+;     PPC Journal, V10 N2 pg. 21-22
+;     http://www.hp41.org/LibView.cfm?Command=Image&FileID=5532
+;
+; [2] SV - Solve Routine
+;     John Kennedy, Graeme Dennes, Richard Schwarts, Harry Bertucelli,
+;     Graeme Dennes and Iram Weinstein, August 1981
+;     PPC ROM User's Manual, page 416-
+;     http://www.hp41.org/LibView.cfm?Command=Image&FileID=23463

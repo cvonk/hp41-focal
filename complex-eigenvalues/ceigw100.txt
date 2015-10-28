@@ -1,0 +1,13 @@
+;  /---------------------------------------------------------------------\
+;  |              C o m p l e x   E i g e n   V a l u e s                |
+;  |                                                                     |
+;  |                            for the HP-41                            |
+;  \---------------------------------------------------------------------/
+; 
+; 				    1.00
+;                                Coert Vonk
+; 
+;    http://www.coertvonk.com/technology/hp41/complex-eigenvalues-4532
+;
+; Ik heb het programma destijds op paper afgedrukt.
+; Wellicht staat het nog op magneetkaartjes ..

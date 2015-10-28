@@ -1,0 +1,135 @@
+;  /---------------------------------------------------------------------\
+;  |                      E i g e n v a l u e s                          |
+;  |                                                                     |
+;  |                            for the HP-41                            |
+;  \---------------------------------------------------------------------/
+;
+;                                   1.00
+;                               Coert Vonk
+;
+;            http://www.coertvonk.com/technology/hp41/eigenvalues-4606
+
+01      LBL "EW"
+02       E-4            ; default eps
+03      STO 00
+04      CF 08
+05      "DIM ?"         ; invoer dimensie
+06      PROMPT
+07      ABS
+08      INT
+09      STO 01
+10      ENTER^
+11      ENTER^
+12       E3
+13      /
+14      +
+15      "INP. MATRIX:"
+16      AVIEW
+17      "B"
+18      XROM 22,29      ; MATDIM: creeer B-matrix
+19      "A"
+20      XROM 22,29      ; MATDIM: creer A-matrix
+21      XROM 22,61      ; MEDIT: invoer A-matrix
+
+22      LBL 00
+23      "A"
+24      XROM 22,18      ; DIM?
+25      INT
+26      "INP. STARTV.:"
+27      AVIEW
+28      "W"             ; creer W-vector
+29      XROM 22,29      ; MATDIM
+30      "V"             ; creer V-vector
+31      XROM 22,29      ; MATDIM
+32      XROM 22,61      ; MEDIT: invoer V-vector
+33      XROM 22,19      ; FNRM
+34      "STARTV. ERR"
+35      X=0?
+36      AVIEW
+37      X=0?
+38      PSE             ; als startvector
+39      X=0?            ; de nulvector is
+40	GTO 00		; dan opnieuw
+41	XEQ 03
+42	RCL 00
+43	"EPS="
+44	ARCL X
+45	>"?"
+46	PROMPT		; invoer epsilon
+47	STO 00
+48	LBL 01
+49	"W"
+50	XROM 22,57      ; SUM
+51	XROM 22,18      ; DIM?
+52	INT
+53	/
+54	VIEW X		; tussenresultaat v/d e.g. laten zien
+55	STO 02
+56	RCL 00
+57	XROM 22,33      ; MIN
+58	+
+59	XROM 22,30      ; MAX
+60	X<=Y?		; test of er aan de nauwkeurigheid eps word voldaan
+61	GTO 00		; zo  ja, spring
+62	XEQ 03		; zo nee, ga verder
+63	GTO 01
+
+; toon de gevonden e.w.
+
+64	LBL 00
+65	RCL 02
+66	"EV="
+67	ARCL X
+68	PROMPT
+69	DSE 01		; alle ew nog niet gevonden?
+70	GTO 04		; dan spring naar 04 
+71	"V"
+72	PURFL		; maak de extended-memory weer schoon
+73	"W"
+74	PURFL
+75	"A"
+76	PURFL
+77	"B"
+78	PURFL
+79	"EINDE"		; we're done
+80	PROMPT
+81	GTO E
+
+; zeef de gevonden eigenwaarde uit de laatst gebruikte matrix (A)
+
+82	LBL 04
+83	 E
+84	"X,V,W"
+85	XROM 22,25      ; MAT*
+86	"W"
+87	XROM 22,59      ; TRNPS
+88	"V,W,B"
+89	XROM 22,24      ; M*M
+90	RCL 02
+91	"X,B"
+92	XROM 22,25      ; MAT*
+93	"A,B,A"
+94	XROM 22,27      ; MAT-
+95	GTO 00
+
+; voer een iteratie slag uit volgens de powermethode
+; zodat v:=A*v en w:=e.w. vector
+
+96	LBL 03
+97	"A,V,W"
+98	XROM 22,24      ; M*M
+99      "W,V"
+100     XROM 22,28      ; MAT/
+101     1.001
+102     XROM 22,18      ; DIM?
+103     RCL Y
+104     "V,W"
+105     XROM 22,49      ; MSWAP
+106     "V"
+107     XROM 22,19      ; FNRM
+108     1/X
+109     "X,V"
+110     XROM 22,25      ; MAT*
+111	RTN
+
+112	END

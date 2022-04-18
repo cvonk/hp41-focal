@@ -1,0 +1,115 @@
+;  /---------------------------------------------------------------------\
+;  |                     B a s e   < >   d e c i m a l                   |
+;  |                                                                     |
+;  |                            for the HP-41                            |
+;  \---------------------------------------------------------------------/
+;
+;				    1.00
+;                                  PPC ROM
+;
+;     https://coertvonk.com/technology/hp41/base-conversion-4516
+
+; BASE TO DECIMAL
+
+01	LBL "BD"
+02	XEQ 06		; input base
+03	AON
+04	STOP		; input number
+
+05	AOFF		; prepare for main loop
+06	CLST		; X=0, Z=0, T=0
+
+07	LBL 01		; base 10 number will accumulate in Y register
+08	>"+"            ; append blanks in alpha until the first character
+09	X<> O		; of the alpha input is pushed into alpha char
+10	X=0?		; 15-21 (O register).
+
+12	X<> M           ; In the loop, the next char which appears in O is
+13	R^		; exchanged iwth M and the stack is rolled up to 
+14	X<> N           ; preserve M in the stack.  The N register is then
+15	"\00\08" 	; bought into X and O is stored in N.  The alpha
+16	X<> N           ; register (MNO) now contains only the net character.
+17	RDN 		; 0x0008 is appended.  N is then returned with its
+18	X<> M           ; original content, the stack is rolled down and then
+19	E   		; the M register is restored and our next character
+20	*		; now appears as a decimal number in X.  This number
+21	39		; is multiplied by 1 so it becomes normalized and then
+22	-		; 39 is subtracted so we may test whether our char is
+23	X>0?            ; a digit 0-9 (row 3 in the next table) or a letter
+24	DSE X		; (row 4).  The X register is then transformed to its
+25	9   		; true decimal value.
+26	+		; It is then tested to see if it is a valid number
+27	X<0?		; (a blank would yield a negative at this point
+28	GTO 02		; causing a jump to LBL 02).
+29	X<>Y            ; If not a blank, the accumulated result is multiplied
+30	RCL 06		; by the base and the next digit is added.
+31	*   		
+32	+
+33	.		; Ensure the Y register is the only nonzero stack
+34	GTO 01		; register when the jump is made back to LBL 01.
+
+35	LBL 02		; End the routine by rolling down the stack to bring
+36	RDN 		; the Y register result into X and the alpha register
+37	CLA		; is cleared.
+38	RTN
+
+; DECIMAL TO BASE
+
+39	LBL "DB"
+40	XEQ 06		; input base
+41	STOP		; input number
+
+; first char is single quote, was F4,27,20,20,20,20,20,20,20,20,20,20,20,20,20  synthetic!
+42   "\27             " ; single quote followed by 13 spaces
+43	RCL M		; Recall 7 spaces into the stack.  These blanks float
+44	X<>Y            ; up and down in the stack throughout the main loop
+45	LBL 03		; and are not used until line 74.
+
+46	ENTER^		; The main loop.  At the start the remaining base 10
+47	INT		; number is in X and the 7 spaces in Y.  The base b
+48	RCL 06		; digits are built up starting with the least
+49	MOD 		; significant digits.  The base 10 equivalent is 
+50	9		; computed at lines 48-49.  Lines 50-57 convert this
+51	-		; decimal number to its alpha equivalent stored in O.
+52	X>0?
+53	ISG X
+54	LBL 04
+55	39
+56	+
+57	10^X
+58	STO O		; Line 58 acts as an append to the remaining char in
+59	>"      "       ; alpha.  The next 4 lines do an alpha shift to
+60	CLX		; prepare M and N for the next char (digit) to be
+61	X<> O           ; appended.
+62	X<> N
+63	STO M
+64	RDN		; Calculate the remaining base 10 result and branch
+65	RCL 06		; to LBL 03 as long as this number is nonzero.
+66	/
+67	INT
+68	X#0?
+69	GTO 03
+
+70	LBL 05		; Pad space char in alpha so the result is left
+71	>" "            ; justified.
+72	CLX
+73	RCL M
+74	X#Y?		; Comparison test with the 7 spaces.
+75	GTO 05
+76	CLX		; Alpha shift so that the final digits are in M
+77	X<> O           ; and N
+78	X<> N
+79	STO M
+80	CLST		 ; Finish by clearing the stack view in the alpha
+81	AVIEW
+82	RTN
+
+83	LBL 06
+84	"BASE ?"
+85	PROMPT
+86	STO 06
+87	"SOURCE ?"
+88	AVIEW
+89	RTN
+
+90	END 

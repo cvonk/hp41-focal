@@ -1,0 +1,455 @@
+;  /---------------------------------------------------------------------\
+;  |                       P o l y n o m i a l s                         |
+;  |                                                                     |
+;  |                            for the HP-41                            |
+;  \---------------------------------------------------------------------/
+;
+;                               Coert Vonk
+;				    1.00
+;
+;  https://coertvonk.com/technology/hp41/polynomial-factorization-4461
+
+01	LBL "POL5"
+
+02	SF 00		; no complex root in R00/R01
+03	FIX 0
+04	CF 29
+05	"ORDER ?"
+06	PROMPT
+07	STO 06		; highest order coefficient
+08	STO 07		; loop variable for coefficient input
+09	 E1
+10	+
+11	STO 08
+
+12	LBL 21		; coefficients input 
+13	"X^"
+14	ARCL 07
+15	>"= ?"
+16	PROMPT
+17	FS?C 00		; complex root in R00/R01?
+18	GTO 20
+19	RCL IND 06	; convert to depressed form
+20	/
+21	LBL 20
+22	STO IND 07
+23	DSE 07		; decrement loop variable
+24	GTO 21
+25	"CONST ?"
+26	PROMPT
+27	RCL IND 06
+28	/
+29	STO 00
+
+30	SF 29		; "digit grouping"
+31	FIX 3
+32	 E		; x=1
+33	STO IND 06	; highest order coefficient is 1 (because depressed form)
+34	-1 
+35	STO 09		; init dd to -1
+36	GTO IND 08	; jump to label matching highest order of polynomial
+
+; SOLVE 2nd ORDER
+
+37	LBL 12
+38	XEQ 08		; find two roots
+39	XEQ 09		; display two roots
+40	GTO 11
+
+; SOLVE 3rd ORDER
+
+41	LBL 13
+42	XEQ 10		; find 3 roots
+43	XEQ 09		; display first two roots
+44	XEQ 16		; display next root
+45	GTO 11
+
+; SOLVE 4th ORDER
+
+46	LBL 14
+47	XEQ 18		; find four roots
+48	XEQ 09		; display first two roots
+49	XEQ 09		; display next two roots
+50	GTO 11
+
+; SOLVE 5th ORDER
+
+51	LBL 15
+52	XEQ 19		; find five roots
+53	XEQ 09		; display first two roots
+54	XEQ 09		; display next two roots
+55	XEQ 16		; display next root
+
+; FINISH UP, and get ready to do it again
+
+56	LBL 11
+57	"END"
+58	PROMPT
+59	XEQ "POL5"
+
+; DISPLAY TWO ROOTS
+
+60	LBL 09
+61	CLA
+62	ISG 09		; dd++
+63	""  		; NOP
+64	FC?C IND 09	; if they are not a complex roots,
+65	GTO 17		;   then display two real roots
+
+66	RCL IND 09	; display complex root in rectangular form
+67	ISG 09
+68	""
+69	RCL IND 09
+70	ABS
+71	ARCL Y
+72	>"+"
+73	ARCL X
+74	>"J"
+75	AVIEW
+76	STOP
+77	CLA		; display conjugate of that root in rectangular form
+78	ARCL Y
+79	CHS
+80	ARCL X
+81	>"J"
+82	PROMPT
+83	RTN
+
+; DISPLAY TWO REAL ROOTS
+
+84	LBL 17
+85	DSE 09		; dd
+86	""  		; NOP
+87	XEQ 16		; display next root, then fall through to show the next one
+
+; DISPLAY ONE REAL ROOT
+
+88	LBL 16
+89	CLA
+90	ISG 09		; dd points to next root
+91	""  		; NOP
+92	ARCL IND 09	; display register pointed to by dd
+93	PROMPT
+94	RTN
+
+; FIND FIVE ROOTS
+;
+; on entry:
+;   depressed form coefficients a0, a1, a2, a3, a4 in R00 .. R04
+;
+; on exit:
+;   if FS?00 then root1 = (R00 + R01.j) and root2 = (R01 - R01.j)
+;            else root1 = (R00 +   0.j) and root2 = (R01 -   0.j)
+;   if FS?02 then root3 = (R02 + R03.j) and root4 = (R02 - R03.j)
+;            else root3 = (R02 +   0.j) and root4 = (R03 -   0.j)
+;   root5 = (R04 + 0.j)
+
+95	LBL 19
+96	RCL 00
+97	STO N		; N = a0
+98	 E
+99	%
+100	STO M		; M = a0 / 100
+101	CLST
+
+102	LBL 00		; on entry Z=1
+103	RCL Z		; X=Z
+104	STO O		; O = starts with 1
+105	4   		; fn = a0 + n*(a1 + n*(a2 + n*(a3 + n*(a4 + n))))
+106	RCL N
+107	LBL 01
+108	RCL IND Y
+109	+
+110	RCL N
+111	*
+112	DSE Y
+113	GTO 01
+114	RCL 00
+115	+
+116	ST* M		; M = M * fn
+117	ST- O		; O = O - fn
+118	RCL M
+119	RCL O
+120	X#0?		; if (O <> 0 )
+121	/		;   then M = M / O
+122	STO M		;   else M = 0
+
+123	X<> N 		; N = N + M
+124	ST+ N
+125	RCL N
+126	X#Y?		; if ( N <> M )
+127	GTO 00		;   then next iteration
+
+128	RCL O		; Eliminate 5th root
+129	R^  		;   a3' = a4 + root5->re
+130	*		;   a2' = a3 + root5->re * a3
+131	+		;   a1' = a2 + root5->re * a2
+132	X<> 04		;   a0' = a1 + root5->re * a1
+133	3
+134	X<>Y		; root5 = N + O * fn
+135	 E
+136	LBL 02
+137	RCL 04
+138	*
+139	+
+140	ENTER^
+141	X<> IND Z
+142	X<>Y
+143	DSE Z
+144	GTO 02
+145	RCL 04
+146	*
+147	+
+148	STO 00		; rolls over to "FIND FOUR ROOTS"
+
+; FIND FOUR ROOTS
+;
+; on entry:
+;   depressed form coefficients a0, a1, a2, a3 in R00 .. R03
+;
+; on exit:
+;   if FS?00 then root1 = (R00 + R01.j) and root2 = (R01 - R01.j)
+;            else root1 = (R00 +   0.j) and root2 = (R01 -   0.j)
+;   if FS?02 then root3 = (R02 + R03.j) and root4 = (R02 - R03.j)
+;            else root3 = (R02 +   0.j) and root4 = (R03 -   0.j)
+
+149	LBL 18
+150	RCL 01
+151	STO N		; N = a1
+152	X^2
+153	RCL 00
+154	STO M		; M = a0
+155	RCL 02
+156	CHS
+157	STO O		; O = -a2
+158	STO 02
+159	4
+160	*
+161	RCL 03
+162	ST* 01
+163	X^2
+164	+
+165	*
+166	+
+167	CHS
+168	X<> 00		; Now:
+169	4		;   a2' = -a2                  (R02)
+170	*		;   a1' = a1*a3-4*a0	       (R01)
+171	ST- 01		;   a0' = a0*(4*a2-a3^2)-a1^2  (R00)
+
+172	XEQ 07		; Find 3 roots
+
+173	RCL 02		; Determine largest root
+174	FS? 00		;   if complex root in R00/R01, then
+175	GTO 06          ;     X = root3->re
+176	RCL 01		;   else
+177	X<Y?		;     X = MAX( root1->re, root2->re, root3->re )
+178	X<>Y
+179	RCL 00
+180	X<Y?
+181	X<>Y		; X = largestRoot
+
+182	LBL 06 		; Eliminate the largest root
+183	STO 00		;   A = a3/2
+184	STO 02     	;   B = largestRoot/2
+185	RCL O		;   C = sqrt(A*A-a2+largestRoot);
+186	+   		;   D = sqrt(B*B-a0);
+187	RCL 03		;   S = sign(A*B-a1/2))    (sign returns 1 if >=0, -1 if <0)
+188	STO 01
+189	RDN
+190	2
+191	ST/ 00
+192	ST/ 01
+193	ST/ 02
+194	ST/ 03
+195	RDN
+196	RCL 01
+197	X^2
+198	+
+199	X<0?
+200	CLX
+201	SQRT
+202	RCL 00
+203	RCL 01
+204	*
+205	RCL N
+206	2
+207	/
+208	-
+209	SIGN
+210	*
+211	ST+ 01
+212	ST- 03
+213	RCL 00
+214	X^2
+215	RCL M
+216	-
+217	X<0?
+218	CLX
+219	SQRT
+220	ST+ 00 		; Find the first two roots
+221	ST- 02		;   a1' = A + S.C;
+222	XEQ 03		;   a0' = B + D;
+
+223	RCL 00		; move the roots from R00..R01 to R02..R03, including flag 00
+224	X<> 02
+225	STO 00		
+226	RCL 01
+227	X<> 03
+228	STO 01
+229	CF 02
+230	FS? 00
+231	SF 02		; Find the next two roots
+232	CLA		;   a1' = A - S.C;
+233	GTO 03 		;   a0' = B - D;
+
+; FIND THREE ROOTS
+;
+; on entry:
+;   depressed form coefficients a0, a1, a2 in R00 .. R02
+;
+; on exit:
+;   if FS?00 then root1 = (R00 + R01.j) and root2 = (R01 - R01.j)
+;            else root1 = (R00 +   0.j) and root2 = (R01 -   0.j)
+;   root3 = (R02 + 0.j)
+
+234	LBL 10		; Find the 3rd root
+235	LBL 07
+236	XEQ 04
+237	RCL 02
+238	3
+239	/
+240	-
+
+241	STO 00		; Eliminate the 3rd root
+242	ST+ 02
+243	RCL 02
+244	*
+245	ST+ 01
+246	RCL 02 
+247	X<> 01		; Find the next two roots (rolls over to LBL 08)
+248	X<> 00		;     a1' = a2 + root3->re                         (R01)
+249	STO 02		;     a0' = a1 + root3->re * ( a2 + root3->re)     (R00)
+
+; FIND TWO ROOTS
+;
+; on entry:
+;   depressed for coefficients a0, a1 in R00 .. R01
+;
+; on exit:
+;   if FS?00 then root1 = (R00 + R01.j) and root2 = (R01 - R01.j)
+;            else root1 = (R00 +   0.j) and root2 = (R01 -   0.j)
+
+250	LBL 08
+251	LBL 03
+252	CF 00
+253	RCL 00
+254	4
+255	*
+256	RCL 01
+257	STO 00
+258	X^2
+259	-		; discr = (a1^2)/4 - a0;
+260	X>0?		; discr > 0?
+261	SF 00
+262	ABS
+263	SQRT
+264	2
+265	CHS
+266	ST/ 00
+267	/
+268	CHS
+269	STO 01
+270	FS? 00		; complex root in R00/R01?
+271	RTN 		; X = sqrt(abs(a0-a1^2/4))
+                       		
+272	RCL 00
+273	STO 01
+274	RDN
+275	ST+ 00
+276	ST- 01
+277	RTN 		; X = sqrt(abs(a0-a1^2/4))
+
+; FIND 3RD ROOT HELPER, returns the real part + a2/3 in X
+;
+; on entry:
+;   depressed form coefficients a0, a1, a2 in R00 .. R02
+;
+; on exit:
+;   Note the ' sign, because to get root3, 2/3 needs to be subtracted
+;   X register holds (root3 + a2/3)
+
+278	LBL 04
+279	RCL 01	        ; Method:
+280	RCL 02	        ;   p = a1/3 - a2^2/9
+281	X^2 		;   q = a1*a2/6 - a2^3/27 - a0/2;
+282	3		;   tmp = p^3 + q^2
+283	/
+284	-
+285	3
+286	/
+287	RCL 01
+288	RCL 02
+289	*
+290	6
+291	/
+292	RCL 02
+293	3
+294	/
+295	LAST X
+296	Y^X
+297	-
+298	RCL 00
+299	2
+300	/
+301	-
+302	X=0?		; if (q==0) then
+303	RTN		;     X = (0 + 0.j)
+
+304	STO Z  	        ; else
+305	X^2
+306	X<>Y
+307	3
+308	Y^X
+309	+		;     if (tmp < 0)
+310	X<0?		;         X = root->re' = 2*(q^2+sqrt(-tmp)^2)^1/3 *
+311	GTO 05		;             cos(phi(q,sqrt(-tmp))/3)
+
+312	SQRT		;     else
+313	ST- Z		;         X = sign(q-sqrt(tmp))*abs(q-sqrt(tmp))^1/3 +
+314	+   		;             sign(q+sqrt(tmp))*abs(q+sqrt(tmp))^1/3
+315	SIGN
+316	LASTX
+317	ABS
+318	3
+319	1/X
+320	Y^X		
+321	*		
+322	X<>Y		
+323	SIGN		
+324	LASTX		
+325	ABS		
+326	3
+327	1/X
+328	Y^X		
+329	*		
+330	+
+331	RTN
+
+332	LBL 05
+333	CHS
+334	SQRT
+335	X<>Y
+336	R-P
+337	3
+338	1/X
+339	Y^X
+340	X<>Y
+341	3
+342	/
+343	COS
+344	*
+345	ST+ X
+346	RTN
+
+347	END 	

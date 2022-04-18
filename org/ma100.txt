@@ -1,0 +1,356 @@
+;  /---------------------------------------------------------------------\
+;  | M a t r i x   t o   R o w   R e d u c e d   E c h e l o n   F o r m |
+;  |                                                                     |
+;  |                            for the HP-41                            |
+;  \---------------------------------------------------------------------/
+;
+;                                   1.00
+;          https://coertvonk.com/technology/hp41/matrix-4631
+;
+; R07 start register matrix (s)
+; R08 columns in matrix (c)
+
+01      LBL "MA"
+02      LBL D		; [LOG]
+03      CLA
+04      AVIEW
+
+05      .               ; store a 1 in R01 for the determinant
+06      STO 03
+07      STO 04
+08      SIGN
+09      STO 01
+10      SF 10           ; for the BX routine
+11      LBL 05          ; make R03 and R04 point to the next pivot position
+12      ISG 03
+13      LBL 06
+14      ISG 04
+15      ""
+16      RCL 08          ; determine when the program ends by checking if
+17      RCL 04          ;  either a row or column boundary has been crossed.
+18      X>Y?
+19      GTO E
+20      RCL 09
+21      RCL 03
+22      X>Y?
+23      GTO E
+24      RCL 04          ; set up the block control word for BX
+25      XEQ 17          ; matrix (i,j) to register address
+26      X<> Z
+27      XEQ 17          ; matrix (i,j) to register address
+28       E3
+29	/
+30	+
+31	RCL 08
+32	 E5
+33	/
+34	+
+35	XEQ 18		; find the pivot number and check if all the remaining
+36	RCL IND M	;  column entries are zero in which case the determinant
+37	ST* 01		;  must be zero and only the next column is incremented
+38	X=0?		;  by branching to LBL 06
+39	GTO 06
+40	1/X		; make a 1 in the row containing the pivot number
+41	RCL M
+42	INT
+43	XEQ 15		; register address to (i,j)
+44	RDN
+45	STO 02
+46	XEQ 19
+47	RCL 02		; check if the pivot number is already in the pivot
+48	ST- 02		;  position.
+49	RCL 03
+50	X=Y?
+51	GTO 07
+52	XEQ 12		; row interchange to move the pivot to the true pivot
+53	RCL 01		;  position and adjust the sign of the determinant
+54	CHS 		;  accordingly,
+55	STO 01
+56	LBL 07		; make 0's in the current pivot column in all rows
+57	ISG 02		;  except the pivot row.
+58	""
+59	RCL 09
+60	RCL 02
+61	X>Y?
+62	GTO 05
+63	RCL 03
+64	X=Y?
+65	GTO 07
+66	RCL 02
+67	RCL 04
+68	XEQ 17		; matrix (i,j) to register address
+69	RDN
+70	RCL IND T
+71	CHS
+72	XEQ 21
+73	GTO 07
+
+; NEW MATRIX
+
+74	LBL A		; [sigma+]
+75	"REG. ?"
+76	PROMPT
+77	STO 07
+78	"R^C"
+79	PROMPT
+80	STO 08
+81	X<>Y
+82	STO 09
+83	SF 09
+84	GTO 01
+
+; REVIEW MATRIX
+
+85	LBL B		; [1/X]
+86	CF 09
+87	LBL 01
+88	CF 29
+89	RCL 07
+90	STO 04
+91	RCL 08
+92	RCL 09
+93	*
+94	STO 03
+95	LBL 02
+96	RCL 04
+97	XEQ 15		; register address to (i,j)
+98	FIX 0
+99	" ("
+100	ARCL Y
+101	>","
+102	ARCL X
+103	>")="
+104	FC? 09
+105	GTO 03
+106	>"?"
+107	TONE 89
+108	PROMPT
+109	STO IND 04
+110	GTO 04
+111	LBL 03
+112	FIX IND 05
+113	ARCL IND 04
+114	AVIEW
+115	LBL 04
+116	ISG 04
+117	""
+118	DSE 03
+119	GTO 02
+120	RTN
+
+; RECALL (Y,X)
+
+121	LBL C		; [sqrt(x)]
+122	XEQ 17		; matrix (i,j) to register address
+123	" R"
+124	ARCL X
+125	AVIEW
+126	STO 04
+127	 E
+128	STO 03
+129	CF 09
+130	GTO 02
+131	LBL 16
+132	X<>Y
+133	STO O
+134	X<>Y
+135	MOD
+136	ST- O
+137	LASTX
+138	ST/ O
+139	CLX
+140	X<> O
+141	X<>Y
+142	RTN
+
+; MULTIPLY ROW BY CONSTANT (M2)
+;
+; on entry
+;   the row number (i) in X
+;   the constant (k) in Y
+
+143	LBL 19	       
+144	XEQ 13	         ; compute the block control word (bbb.eee) for row i
+145	X<>Y	         ; 
+146	LBL 20	         ; the constant k is then placed in X and M2 runs
+147	ST* IND Y        ;  through a short loop to multiply each element of
+148	ISG Y	         ;  row i by the constant k
+149	GTO 20
+150	RTN
+
+; ADD MULTIPLE OF ANOTHER ROW (M3)
+;
+; Add a constant multiple of one row in a matrix to another row.  The row
+; that is multiplied does not change.
+
+151	LBL 21
+152	STO M	        ; M is used for tmp storage
+153	RDN
+154	XEQ 13	        ; compute the block control word (bbb.eee) for row i
+155	X<>Y
+156	XEQ 13		; compute the block control word (bbb.eee) for row i
+157	RCL M
+158	SIGN	        ; store k in LASTX
+159	LBL 22	        ; the main loop.
+160	RDN
+161	RCL IND Y
+162	LASTX
+163	*
+164	ST+ IND Y
+165	ISG Y
+166	""
+167	ISG Z
+168	GTO 22
+169	RTN
+
+; INTERCHANGE ROWS (M1)
+;
+; The matrix is assumed to be stored with each row occupying a consecutive
+; block of registers.  The entire matrix is assumed to be stored row by row
+; as one string of consecutive data registers.
+; Like the other 4 matrix routines, M1 requires two stored values: R07 holds
+; the starting register of the matrix, and R08 holds the number of columns in
+; the matrix.  Both the row and column numbers start counting from 1.
+; To interchange any two rows in the matrix enter the two row numbers in Y
+; and X (the order is unimportant) and call M1.  M1 performs a block
+; exchange of the two rows involved by dropping into the routine BE. 
+
+170	LBL 12	    ; Feeds into the block exchange routine BE after
+171	XEQ 13	    ;  setting up the two block control words for the
+172	X<>Y	    ;  two rows by calling LBL 13 twice.
+173	XEQ 13
+
+; BLOCK EXCHANGE (BE)
+;
+; On entry the two block control words are assumed to be in X and Y on the
+; stack.
+
+174	LBL 14
+175	RCL IND Y
+176	X<> IND Y   ; Perform the exchange on an element by element basis
+177	STO IND Z   ;  as part of the loop.
+178	RDN 	    ; Put the stack back in the correct config for the next
+180	""	    ;  pass through the loop.
+181	ISG X	    ; Both X and Y are incremented, but note that only Y
+182	GTO 14	    ;  is tested.  (line 180 is a NOP.)
+183	RTN
+
+; COMPUTE THE BLOCK CONTROL WORD (BBB.EEE) FOR ROW I
+;
+;   bbb = s + c*(i-1)
+;   eee = s + c*i - i
+
+184	LBL 13	      ; on entry
+185	RCL 08	      ;   the starting register (s) in R07
+186	*   	      ;   the number of columns in the matrix (c) in R08
+187	RCL 07	      ;   the row number of the ith row (i) in X
+188	+
+189	RCL X
+190	RCL 08
+191	ST- Z
+192	SIGN
+193	-
+194	 E3
+195	/
+196	+
+197	RTN
+
+; M4 - register address to (i,j)
+;
+; Determine the row number i nd the column number j from the register
+; number r by the following formulas using the starting register (s) of the
+; matrix and the number of columns (c) in the matrix:
+;   i = INT((r-s)/c) + 1
+;   j = (r-s) MOD c + 1
+
+198	LBL 15
+199	RCL 07
+200	-
+201	RCL 08
+202	XEQ 16		; calculate i-1 and j-1
+203	ISG Y		; increment these values
+204	""  		; NOP
+205	ISG X
+206	""		; NOP
+207	RTN
+
+; MATRIX (I,J) TO REGISTER ADDRESS (M5)
+;
+; Determine the register number of the (i,j) element in a matrix (row i,
+; column j).  On entry column number in X, and row number in Y.  Returns
+; the register number in X
+
+208	LBL 17 	        ; r = s + c*(i-1) + (j-1)
+209	X<> 08
+210	ST- 08
+211	*
+212	ST+ 08
+213	X<> L
+214	X<> 08
+215	 E
+216	-
+217	RCL 07
+218	+
+219	RTN
+
+; BLOCK EXTREMA (BX)
+;
+; Finds the largest or smallest element of a block of registers.  By setting
+; F10, only absolute values of the elements will be considered.  The maximum
+; and minimum values as well as the their register numbers are returned:
+;   Y: maximum value
+;   X: minimum value
+;   M: register of the maximum value (INT part)
+;   N: register of the minimum value (INT part)
+
+220	LBL 18
+221	STO M
+222	STO N
+223	STO O
+224	RCL IND X
+225	FS? 10
+226	ABS
+227	ENTER^
+228	ENTER^
+229	RDN
+230	LBL 08
+231	CLX
+232	RCL IND Z
+233	FS? 10
+234	ABS
+235	X>Y?
+236	GTO 10
+237	R^
+238	X>Y?
+239	GTO 11
+240	RDN
+241	LBL 09
+242	ISG Z
+243	GTO 08
+244	X<>Y
+245	R^
+246	RTN
+247	LBL 10
+248	X<>Y
+249	CLX
+250	RCL Z
+251	STO M
+252	GTO 09
+253	LBL 11
+254	CLX
+255	RCL T
+256	STO N
+257	X<>Y
+258	RDN
+259	GTO 09
+260	RTN
+
+; 
+
+261	LBL E		; [LN]
+262	"D="
+263	ARCL 01
+265	TONE 89
+266	TONE  7
+267	TONE 89
+268	END

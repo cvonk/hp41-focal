@@ -1,0 +1,74 @@
+;  /---------------------------------------------------------------------\
+;  |          H y p e r b o l i c a l   O p e r a t i o n s              |
+;  |                                                                     |
+;  |                            for the HP-41                            |
+;  \---------------------------------------------------------------------/
+;
+;				    1.00
+;                               Coert Vonk
+;          https://coertvonk.com/technology/hp41/hyperbolic-4623
+
+	01	LBL "HYP"
+
+	02	LBL H	; [sinh]
+	03	STO M
+	04	E^X-1
+	05	LASTX
+	06	E^X
+	07	/
+	08	RCL M
+	09	E^X-1
+	10	+
+	11	LBL 00
+	12	2
+	13	/
+	14	RTN
+
+	15	LBL I 	; [cosh]
+	16	E^X
+	17	1/X
+	18	LASTX
+	19	+
+	20	GTO 00
+
+	21	LBL J	; [tanh]
+	22	XEQ H
+	23	RCL M
+	24	XEQ I
+	25	/
+	26	RTN
+
+	27	LBL C	; [asinh]
+	28	X^2
+	29	LASTX
+	30	X<>Y
+	31	 E
+	32	+
+	33	GTO 01
+
+	34	LBL E	; [atanh]
+	35	 E
+	36	+
+	37	ENTER^
+	38	ENTER^
+	39	2
+	40	-
+	41	/
+	42	CHS
+	43	LN
+	44	GTO 00
+
+	45	LBL D	; [acosh]
+	46	X^2
+	47	LASTX
+	48	X<>Y
+	49	 E
+	50	-
+	51	LBL 01
+	52	SQRT
+	53	+
+	54	LN
+	55	END 
+
+; REFERENCES
+; ==========

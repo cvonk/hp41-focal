@@ -1,0 +1,105 @@
+;  /---------------------------------------------------------------------\
+;  |                         I n t e g r a t e                           |
+;  |                                                                     |
+;  |                            for the HP-41                            |
+;  \---------------------------------------------------------------------/
+;
+;                                   1.00
+;         https://coertvonk.com/technology/hp41/integrate-4625
+
+01      LBL "IG"	; init by
+02      "F-NAME ?"	;   store constants (b-a)/4 in R16
+03      AON		;   store constants (b+a)/4 in R17
+04      STOP
+05      ASTO 10
+06      AOFF
+07      SF 10
+08      STO 17
+09      X<>Y
+10      -
+11      4
+12      /
+13      STO 16
+14      ST- 17
+15      ST- 17
+16      .		; initialize Sk, k and M(k,k) for k=0
+17      STO 15
+18      STO 11
+19      STO 18
+20      SF 09		; for at least two iterations (see 089-090)
+21      LBL 01		; calculate u0 and the step size 2^(k-1)
+22       E
+23      2
+24      STO 14
+25      RCL 11
+26      CHS
+27      Y^X
+28      ST* 14
+29       E
+30      -
+31      LBL 02
+32      STO 12
+33      X^2		; calculate xi
+34      -
+35      STO 13
+36      2
+37      +
+38      RCL 12
+39      *
+40      RCL 16
+41      *
+42      RCL 17
+43      +
+44      XEQ IND 10	; calculate f(xi)
+45      RCL 13
+46      *
+47      ST+ 15		; calculate Sk
+48       E
+49      RCL 12
+50      RCL 14
+51      +
+52      X<Y?
+53      GTO 02
+54      RCL 11		; calculate M(k,0)
+55      STO 13
+56      18
+57      STO 12
+58       E
+59      ST+ 11
+60      RCL 15
+61      RCL 16
+62      1.5
+63      *
+64      *
+65      RCL 14
+66      *
+67      LBL 03		; calculate M(k,j)
+68      R^
+69      4
+70      *
+71      ENTER^
+72      DSE Y
+73      X<> Z
+74      ENTER^
+75      X<> IND 12
+76      ST- Y
+77      RND
+78      X<> Z
+79      /
+80      RCL IND 12
+81      +
+82      ISG 12
+83      STOP
+84      DSE 13
+85      GTO 03
+86      STO IND 12
+87      FS? 10
+88      VIEW X
+89      FS?C 09
+90      GTO 01
+91      RND		; end when two consecutive rounded approximations
+92      X#Y?		;   are equal
+93      GTO 01
+94      LASTX		; recall the final approximation and halt.
+95      RTN
+96	END 

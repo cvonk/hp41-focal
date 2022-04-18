@@ -1,0 +1,266 @@
+;  /---------------------------------------------------------------------\
+;  |                       C u r v e   F i t                             |
+;  |                                                                     |
+;  |                         for the HP-41                               |
+;  \---------------------------------------------------------------------/
+;
+;                               1.00
+;                             PPC ROM
+;
+;         https://coertvonk.com/technology/hp41/curve-fit-4581
+
+; BLOCK CLEAR ROUTINE, stores zeroes in a block of registers
+;
+; uses the complete form of the general block control word bbb.eeeii an
+; can thus be used to clear blocks of consecutive registers or can be used
+; to sip over registers within a block.
+
+01      LBL "BC"        
+02      LBL 16
+03      SIGN
+04      CLX
+05      LBL 20
+06      STO IND L
+07      ISG L
+08      GTO 20
+09      RTN
+
+10      LBL 17
+11      LBL "CV"
+12      GTO IND 06      ; provides access to all numeric labels within CV
+
+; INPUT A DATA POINT
+;
+; All summations are updated when this routine is called.  These summations
+; include sums of x, x^2, y, y^2, xy, ln(x), ln(x)^2, ln(y)^2, ln(x).ln(y),
+; x.ln(y), y.ln(x).
+
+13      LBL A           ; [sigma+]
+14      LBL 01
+15      CF 10
+16      LBL 06
+17      STO 09
+18      X<>Y
+19      STO 08
+20      sREG 13
+21      FC? 10
+22      s+
+23      FS? 10
+24      s-
+25      RDN
+26      RCL 08
+27      ENTER^
+28      X>0?
+29      LN
+30      ST* Z
+31      RCL 09
+32      X>0?
+33      LN
+34      ST* Z
+35      X<>Y
+36      sREG 19
+37      FC? 10
+38      s+
+39      FS? 10
+40      s-
+41      R^
+42      FS? 10
+43      CHS
+44      ST+ 12
+45      R^
+46      FS? 10
+47      CHS
+48      ST+ 11
+49      X<> Z
+50      SIGN
+51      ST+ L
+52      RCL 08
+53      RCL 09
+54      X<> L
+55      TONE 9
+56      RTN
+
+57      RCL 08
+58      RCL 09
+
+; REMOVE A DATA POINT
+;
+
+59      LBL a
+60      SF 10           ; signal "remove data point"
+61      GTO 06          ; jump to "add data point"
+
+; SOLVE SPECIFIED CURVE TYPE J
+;
+; b is stored in R08, a is stored in R09, r2 is stored in R10
+
+62      LBL B           ; [SOLVEj]
+63      LBL 02
+64      CF 08
+65      CF 09
+66      STO 07
+67      2
+68      X<Y?
+69      SF 09
+70      /
+71      FRC
+72      X=0?
+73      SF 08
+74      8
+75      ST+ 07
+76      XEQ IND 07
+77      RCL 17
+78      RCL 13
+79      RCL 15
+80      STO 09
+81      *
+82      RCL 18
+83      /
+84      -
+85      STO 10
+86      RCL 14
+87      RCL 13
+88      X^2
+89      RCL 18
+90      /
+91      -
+92      STO Z
+93      /
+94      STO 08
+95      RCL 13
+96      *
+97      ST- 09
+98      X<>Y
+99      RCL 16
+100     RCL 15
+101     X^2
+102     RCL 18
+103     ST/ 09
+104     /
+105     -
+106     *
+107     SQRT
+108     ST/ 10
+109     XEQ IND 07
+110     8
+111     ST- 07
+112     RCL 10
+113     RCL 09
+114     FS? 08
+115     E^X
+116     STO 09
+117     RCL 08
+118     TONE 5
+119     RTN
+
+; A SERIES OF INTERTWINED SUBROUTINES, called in the curve fitting process.
+;
+; These routine simply perform a series of register exchanges which place
+; the proper sums in the sigma registers for the calculation of the
+; parameters a, b and r2 depending on the curve type selected.  Since the
+; exchange is performed twice (line 076, line 109) all registers are
+; returned to their original state.
+
+120     LBL 10
+121     RCL 11
+122     X<> 17
+123     STO 11
+124     LBL 13
+125     RCL 21
+126     X<> 15
+127     STO 21
+128     RCL 22
+129     X<> 16
+130     STO 22
+131     LBL 09
+132     RTN
+
+133     LBL 11
+134     RCL 12
+135     X<> 17
+136     STO 12
+137     LBL 14
+138     RCL 19
+139     X<> 13
+140     STO 19
+141     RCL 20
+142     X<> 14
+143     STO 20
+144     RTN
+
+145     LBL 12
+146     RCL 23
+147     X<> 17
+148     STO 23
+149     XEQ 14
+150     GTO 13
+
+; PREDICT THE Y VALUE
+
+151     LBL C           ; [Y^]
+152     LBL 03
+153     FS? 09
+154     LN
+155     RCL 08
+156     *
+157     RCL 09
+158     FS? 08
+159     LN
+160     +
+161     FS? 08
+162     E^X
+163     RTN
+
+; PREDICT THE X VALUE
+
+164     LBL D           ; [X^]
+165     LBL 04
+166     FS? 08
+167     LN
+168     RCL 09
+169     FS? 08
+170     LN
+171     -
+172     RCL 08
+173     /
+174     FS? 09
+175     E^X
+176     RTN
+
+; INITIALIZE, clear the data registers used to accumulate the sums
+
+177     LBL e           ; [INIT]
+178     LBL 00
+179     11.024
+180     XEQ 16
+181      E
+182     RTN
+
+; SOLVE BEST CURVE TYPE
+
+183     LBL E           ; [SOLVE]
+184     LBL 05
+185     .
+186     STO 25
+187     4
+188     STO 07
+189     LBL 07
+190     RCL 07
+191     XEQ B
+192     RCL 25
+193     RCL 10
+194     ABS
+195     X<=Y?
+196     GTO 15
+197     STO 25
+198     RCL 07
+199     STO 26
+200     LBL 15
+201     DSE 07
+202     GTO 07
+203     RCL 26
+204     XEQ 02
+205     RCL 26
+206     TONE 5
+
+207     END 

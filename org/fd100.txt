@@ -1,0 +1,113 @@
+;  /---------------------------------------------------------------------\
+;  |                    F i r s t   D e r i v a t i v e                  |
+;  |                                                                     |
+;  |                            for the HP-41                            |
+;  \---------------------------------------------------------------------/
+;
+;				    1.00
+;                       John Kennedy, August 1981
+;       https://coertvonk.com/technology/hp41/first-derivative-4618
+
+01	LBL "FD"
+02      FS? 09          ; quick polynomial?
+03      GTO 03
+
+04      17              ; store display mode in R17 (PPC SD-function)
+05      SIGN            ;  for details refer to [3]
+06      RDN
+07	RCL d
+08	STO M
+09	>"\00\00"
+10	X<> M
+11	"*"
+12	X<> M
+13	STO N
+14	ASTO IND L
+15	RDN
+
+16	SCI 1		; change display mode
+17	2 E-3		; R14 is the loop counter
+18	STO 14
+
+19	LBL 00		; both part of init and part of main loop
+20	RCL 12		;   see [1]
+21	.7
+22	*
+23	RDN
+24	STO 12
+25	XEQ 08
+26	ENTER^
+27	X<> 16
+28	-
+29	ENTER^
+30	FS? 10
+31	VIEW X
+32	X<> 15
+33	ISG 14
+34	GTO 00
+
+35	LASTX		; main loop cont'd
+36	RDN		;   see [1]
+37	X=0?
+38	GTO 02
+39	/		; test monotonicity
+40	 E		;   see [1]
+41	X<>Y
+42	X<0?
+43	GTO 01
+44	X<Y?
+45	GTO 00
+
+46	LBL 01		; setup stack contents
+47	X<> L		;  see [1]
+48	LBL 02
+49	R^
+50	.7
+51	ST/ 12		; restore the previous h value 
+52	CLX 		;   without lifting the stack
+
+53	17		; recall display mode from R17 "PPC RD-function"
+54	SIGN		;   for details refer to [2]
+55	ARCL IND L
+56	RDN
+57	RCL d
+58	STO N
+59	>"**"
+60	X<> O
+61	STO N
+62	>"*****"
+63	X<> N
+64	STO d
+65	RDN
+66	CLA
+67	RTN		; return
+
+68	LBL 03		; 4-point polynomial estimate
+69	.
+70	STO 13
+71	XEQ IND 10
+72	11
+73	XEQ 09
+74	-18
+75	XEQ 09
+76	9
+77	XEQ 09
+78	ST+ X
+79	RCL 13
+80	-
+81	RCL 12
+82	3
+83	*
+84	ST- IND 11
+85	ST+ X
+86	/
+87	ENTER^
+88	RTN
+
+89	LBL 09
+90	*
+91	ST+ 13
+92	RCL 12
+93	ST+ IND 11
+94	GTO IND 10
+95	END 

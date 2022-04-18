@@ -1,0 +1,968 @@
+;       /-----------------------------------------------------------\
+;       |   C  O  M  P  L  E  X      A  R  I  T  H  M  E  T  I  C   |
+;       |                                                           |
+;       |              with adjustable branch cut                   |
+;       |                                                           |
+;       |                    for the HP-41                          |
+;       \-----------------------------------------------------------/
+;
+;                                4.01
+;                            by Coert Vonk
+;
+; https://coertvonk.com/technology/hp41/complex-arithmetic-branchcut-5032
+
+1       LBL "CA"
+2       "CA V4.01"
+3       AVIEW
+4       PI              ; store "snedehoek"
+5       ST+ X
+6       STO 15
+7       RDN
+8       CF 03           ; clear prefix flags (ARC, HYP)
+9       CF 04           
+10      RAD
+11      FS?C 14         ; if the "do not clear stack" flag is set
+12      GTO 01          ;   then jump to LBL 00,
+13      6
+14      STO 00
+15      XEQ 48
+16      STO 01          ; clear LASTZ
+17      STO 02
+18      LBL 01
+19      CF 10
+20      CF 22
+21      CF 25
+22      FS? 00
+23      XEQ 33
+24      XEQ 10          ; display complex number (x + y.j)
+25      STOP
+26      ENTER^
+27      LBL 02
+28      "FUNCTION ?"
+29      AVIEW
+30      CLX
+31      GETKEY          ; wait for an operation keycode
+32      X=0?
+33      GTO 02
+34      31
+35      X#Y?            ; if not the "shift" key
+36      GTO 00          ;   then handle that operation
+37      R^              ;   else update the shift annunciator
+38      R^
+39      "\01\00"
+40      FS? 47
+41      CLA
+42      RCLFLAG
+43      ASTO d
+44      STOFLAG
+45      AOFF
+46      GTO 02
+
+47      LBL 00          ; handle operation associated with a keycode
+48      CLX
+49      5
+50      FC? 47          ; if "shift was active"
+51      CLX             ;   then increment key code by 5 
+52      +
+53      RDN
+54      CLD
+55      "OK"            ; ??
+56      AVIEW
+57      SF 25
+58      XEQ IND T       ; call the corresponding operation
+59      FC?C 14
+60      GTO 01
+61      ENTER^
+62      GTO 02
+
+; TOGGLE [ARC] MODIFIER, for ASIN, ACOS, ATAN
+
+63      LBL 11          ; [ARC], key label [sigma+]
+64      FC?C 03
+65      SF 03
+66      SF 14           ; indicate "more key strokes to follow"
+67      RTN
+
+; TOGGLE [HYP] MODIFIER, for SINH, COSH and TANH
+
+68      LBL 16          ; [HYP], key label [sigma-]
+69      FC?C 04
+70      SF 04
+71      SF 14           ; indicate "more key strokes to follow"
+72      RTN
+
+; TOGGLES FLAG 01, and RECALLS Z1 to X,Y
+
+73      LBL 67          ; sorry I don't remember what the pupose of this
+74      FC?C 01		;  operator is
+75      SF 01
+76      GTO 00
+
+; SWITCH BETWEEN POLAR AND RECTANGULAR NOTATION
+;
+; rectilinear to polar coordinates
+;   r = sqrt(x^2+y^2), phi=atan(y,x)
+; polar to rectilinear
+;   x = r.cos(phi)
+;   y = r.sin(phi)
+
+77      LBL 68          ; [RECT], key label [P>R]
+78      CF 00
+79      GTO 00
+80      LBL 69          ; [POL], key label [R>P]
+81      SF 00
+82      LBL 00
+83      RCL 04          ; get Z1 from the complex stack as (x + y.j)
+84      RCL 03
+85      RTN
+
+; COMPLEX RECIPROCAL (1/Z)
+;
+; on entry : Z in X,Y registers in the form (x + y.j)
+; on exit  : the result is stored as Z1 on the complex stack
+;            the result is stored in X,Y in the form (x + y.j)
+;            LASTZ1 holds a copy of the operation operand Z
+
+86      LBL 12          ; [1/Z] operation
+
+87      XEQ 09          ; push (x + y.j) onto complex stack and update LASTZ1
+88      XEQ 31          ; compute (x + j.y) = 1 / (x + j.y)
+89      GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; COMPLEX ENTER^
+;
+; on entry : Z in X,Y registers in the form (x + y.j)
+; on exit  : Z is pushed up the complex stack as Z1 and Z2
+;            Z is X,Y in the form (x + y.j)
+;            LASTZ1 is unchanged
+
+90      LBL 41          ; [CENTER^] operation
+
+91      XEQ 04          ; push (x + y.j) onto complex stack
+92      XEQ 11          ; move complex stack up, Z1 > Z2 > Z3 > Z4 > Z5 > Z6
+93      SF 02           ; "no stack lift"
+94      RTN
+
+; COMPLEX CLEAR STACK 
+;
+; on entry : n/a
+; on exit  : Z1..Z6 on the complex stack are set to (0 + 0j)
+;            LASTZ1 is unchanged
+
+95      LBL 48          ; [CCLST] operation
+
+96      RCL 00
+97      ISG X
+98      ""
+99      ST+ X
+100      E3
+101     /
+102     3
+103     +
+104     SIGN
+105     CLX
+106     LBL 34
+107     STO IND L
+108     ISG L
+109     GTO 34
+110     CF 02           ; no "no stack lift"
+111     CLST
+112     RTN
+
+; COMPLEX CHANGE SIGN AND COMPLEX CONJUGATE (Complement)
+;
+;     -(x + y.j) = -x - y.j  (change sign)
+;     (x + y.j)* =  x - y.j  (conjugate)
+;
+; on entry : Z in X,Y registers in the form (x + y.j)
+; on exit  : the result is stored as Z1 on the complex stack
+;            the result is stored in X,Y in the form (x + y.j)
+;            LASTZ1 holds a copy of the operation operand Z
+
+113     LBL 42          ; [CHSZ] operation
+114     SF 10
+115     LBL 47          ; [COMPLZ] operation
+
+116     XEQ 04          ; push (x + y.j) onto complex stack
+117     FS? 10
+118     CHS
+119     X<>Y
+120     CHS
+121     X<>Y
+122     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; CLEAR Z1
+;
+; on entry : Z in X,Y registers in the form (x + y.j)
+; on exit  : Z is pushed up the complex stack as Z1 and Z2
+;            Z is X,Y in the form (x + y.j)
+;            LASTZ1 is unchanged
+
+123     LBL 49          ; [CLZ1] operation
+
+124     XEQ 04          ; push (x + y.j) onto complex stack
+125     CLST
+126     SF 02           ; "no stack lift"
+127     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; LAST Z1
+; 
+; on entry : n/a
+; on exit  : the operand from the last numeric operation (except CHSZ)
+;              is pushed onto the complex stack
+;            the operand from the last numeric operation (except CHSZ)
+;              is stored in X,Y in the form (x + y.j)
+
+128     LBL 88          ; [LASTZ1] operation
+
+129     FS? 02
+130     FS? 22          ; if "no stack lift" or "input from keyboard"
+131     XEQ 41          ;   then perform CENTER^
+132     CF 02
+133     RCL 02          ; LASTZ1
+134     RCL 01
+135     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; COMPLEX ADDITION AND SUBTRACTION
+;
+;     (z + t.j) + (x + y.j) = (x + z) + j.(y + t)
+;     (z + t.j) - (x + y.j) = (x - z) + j.(y - t)
+;
+; on entry : if number was entered on the keyboard,
+;              then (x + y.j) as entered in X,Y registers, and
+;                   (z + t.j) from Z1 on the complex stack
+;              else (x + y.j) from Z1 on the complex stack, and
+;                   (z + t.j) from Z2 on the complex stack
+; on exit  : the result is stored as Z1 on the complex stack
+;            the result is stored in X,Y in the form (x + y.j)
+;            LASTZ1 holds a copy of (x + y.j)
+
+136     LBL 51          ; [C-] operation
+137     SF 10
+138     LBL 61          ; [C+] operation
+
+139     XEQ 07          ; get two operands, as (x + j.y) and (z + j.t)
+140     FS? 10
+141     CHS
+142     X<>Y
+143     FS? 10
+144     CHS
+145     ST+ T
+146     RDN
+147     +
+148     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; COMPLEX MULTIPLICATION AND DIVISION
+;
+;     Z2 * Z1 = (re1 + j.im1) * (re2 + j.im2) = 
+;             = (re1.re2 - im1.im2 ) + j.(im1.re1 + re1.im2)
+;
+;     Z2 / Z1 = Z2 * 1/Z1
+
+149     LBL 81          ; [C/] operation
+150     SF 10
+151     LBL 71          ; [C*] operation
+
+152     XEQ 07          ; get two operands, as (x + j.y) and (z + j.t)
+153     FS? 10          ; if division
+154     XEQ 31          ;   then compute (x + j.y) = 1 / (x + j.y)
+155     XEQ 00          ; compute (x + j.y) * ( z + j.t)
+156     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; COMPLEX POWER OF A COMPLEX NUMBER
+; 
+;           (x+y.j)      z    -t.phi1    j.(z.phi1 + t.ln(r1))
+;     (z+t.j)       =  r1  . e        . e
+;
+;   where:
+;         r1   = sqrt(x^2+y^2)
+;         phi1 = .... x + y.j ....????
+
+157     LBL 17          ; [Z2^Z1] operation
+
+158     XEQ 07          ; get two operands, as (x + j.y) and (z + j.t)
+159     R^
+160     R^
+161     XEQ 33
+162     LN
+163     XEQ 00          ; compute (x + j.y) * ( z + j.t)
+164     E^X
+165     P-R
+166     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; COMPLEX PARALLEL CIRCUIT, useful in network theory
+;
+;            Z1 . Z2
+; Z1 // Z2 = -------    {for |Z1+Z2| <> 0}
+;            Z1 + Z2
+
+167     LBL 32          ; [CPAR] operation
+168     XEQ 07          ; get two operands, as (x + j.y) and (z + j.t)
+169     XEQ 31          ; compute 1 / ( x + j.y)
+170     R^
+171     R^
+172     XEQ 31          ; compute 1 / ( x + j.y)
+173     X<>Y
+174     ST+ T
+175     RDN
+176     +
+177     XEQ 31          ; compute 1 / ( x + j.y)
+
+; COPY (x + y.j) TO COMPLEX STACK
+
+178     LBL 03          ; [PRGM] keycode
+179     STO 03
+180     X<>Y
+181     STO 04
+182     X<>Y
+183     RTN
+
+; MULTIPLY TWO COMPLEX NUMBERS subroutine
+;
+;     (x + y.j) * (z + t.j) = (x + j.y) * (z + j.im2) = 
+;                           = (x.z - y.t ) + j.(y.x + x.t)
+
+184     LBL 00
+185     STO L           
+186     R^              
+187     ST* L
+188     X<> Z
+189     ST* Z
+190     R^
+191     ST* Y
+192     ST* Z
+193     X<> L
+194     +
+195     X<> Z
+196     -
+197     RTN
+
+; COMPLEX COMMON (base 10) and NATURAL (base e) LOGARITHM
+;
+;     ln(x + y.j) = ln(r) + j.phi
+; 
+;     Z1
+;       log(Z2) = ln(Z2) / ln(Z1)
+
+198     LBL 14          ; [LOG(Z)] operation
+199     XEQ 08          ; get operand, as (x + j.y) and update LASTZ
+200     LN              ; x=ln(M1), y=phi1
+201     GTO 00
+
+202     LBL 15          ; [LN(Z)] operation
+203     XEQ 09          ; push (x + y.j) onto complex stack and update LASTZ
+204      E              ; x=1
+
+205     LBL 00
+206     RDN
+207     XEQ 33
+208     LN
+209     R^
+210     ST/ Z
+211     /
+212     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; COMPLEX COMMON (base 10) and NATURAL (base e) EXPONENTIAL
+;
+;     (x + j.y)    x              x
+;    e          = e .sin(y) + j.e .cos(y)
+
+213     LBL 19          ; [n^Z] operation
+214     XEQ 08          ; get operand, as (x + j.y) and update LASTZ
+215     LN
+216     GTO 00          ; reuse part of  [E^Z] operation
+
+217     LBL 20          ; [E^Z] operation
+218     XEQ 09          ; push (x + y.j) onto complex stack and update LASTZ
+219      E
+
+220     LBL 00
+221     ST* Z
+222     *
+223     E^X
+224     P-R
+225     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; COMPLEX EXPONENTIATION WITH REAL EXPONENT n
+
+226     LBL 18          ; [Z^n] operation
+
+227     XEQ 08          ; get operand, as (x + j.y) and update LASTZ
+228     RDN
+229     XEQ 33
+230     R^
+231     ST* Z
+232     Y^X
+233     P-R
+234     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; COMPLEX ROOT OF REAL NUMBER n
+;        __
+;     Z1/         1/Z1
+;     \/ Z2   = Z2
+;        __
+;     n /        1/n   j.(phi/n)
+;     \/ Z    = M   . e
+
+235     LBL 13          ; [Z^1/n] operation
+
+236     XEQ 08          ; get operand, as (x + j.y) and update LASTZ
+237     RDN
+238     XEQ 33
+239     R^
+240     1/X
+241     Y^X
+242     STO N
+243     RDN
+244     2
+245     PI
+246     *
+247     RCL N
+248     X<>Y
+249     R^
+250     ST/ T
+251     ST/ Y
+252     R^
+253     R^
+254     LBL 05
+255     FC? 00
+256     P-R
+257     XEQ 10          ; display complex number (x + y.j)
+258     AON
+259     STOP
+260     FC? 00
+261     XEQ 33
+262     R^
+263     ST+ Z
+264     RDN
+265     DSE Z
+266     GTO 05          ; loop back to LBL 05
+267     P-R
+268     AOFF
+269     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; COMPLEX SINE, COSECANT, COSINE AND SECANT
+;
+;     sin( x + j.y) = sin(x).cosh(y) + j.cos(x).sinh(y)
+;     cos( x + j.y) = cos(x).cosh(y) - j.sin(x).sinh(y)
+;     sinh(x + j.y) = cos(y).sinh(x) + j.sin(y).cosh(x)
+;     cosh(x + j.y) = cos(y).cosh(x) + j.sin(y).sinh(x)
+;     csc(x + j.y)  = 1 / sin( x + j.y)
+;     sec(x + j.y)  = 1 / cos( x + j.y)
+;     csch(x + j.y) = 1 / sinh(x + j.y)
+;     sech(x + j.y) = 1 / cosh(x + j.y)
+;
+; Flags used:
+;     flag 04, indicates [HYP]
+;     flag 10, indicates [SIN], otherwise [COS]
+;     flag 14, indicates inverse operation (CSC and COS, aka SIN^-1 and COS^-1)
+;
+; Reference:
+;     http://en.wikipedia.org/wiki/Complex_number#Complex_analysis
+
+270     LBL 28          ; [CSC(Z)] operation
+271     SF 14
+
+272     LBL 23          ; [SIN(Z)] operation
+273     SF 10
+
+274     LBL 29          ; [SEC(Z)] operation
+275     FC? 10
+276     SF 14
+
+277     LBL 24          ; [COS(Z)] operation
+
+278     XEQ 09          ; push (x + y.j) onto complex stack and update LASTZ
+279     FS?C 03         ; ARC?
+280     GTO 13
+281     XEQ 00          ; calculate cos/sin/cosh/sinh
+282     ST* T
+283     RDN
+284     *
+285     CHS
+286     FC? 04          ; HYP?
+287     FS? 10          ; SIN?
+288     CHS
+289     FC?C 04         ; HYP?
+290     FC? 10          ; COS?
+291     X<>Y
+292     FS?C 14         ; inverse operation?
+293     XEQ 31          ;   then compute Z1 = 1 / Z1
+294     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; COMPLEX TANGENT AND COTANGENT, doesn't support ARC or HYP variations
+;
+;     tan(x + j.y) = sin(2.x)  / ( cosh(2.y) + cos(2.x) ) +
+;                    sinh(2.y) / ( cosh(2.y) + cos(2.x) ) . j
+;     cot(Z) = 1 / tan(Z)
+;
+; Flags used:
+;     F03 indicates [ARC]
+;     F04 indicates [HYP]
+;     F14 indicates inverse operation (COT aka TAN^-1]
+
+295     LBL 30          ; [COT(Z)] operation
+296     SF 14
+297     LBL 25          ; [TAN(Z)] operation
+298     XEQ 09
+299     FS?C 03         ; ARC?
+300     GTO 14
+301     2               ; multiply x and y by 2
+302     ST* Z
+303     *
+304     XEQ 00          ; calculate cos/sin/cosh/sinh (F04=0, F10=0)
+305     R^
+306     +
+307     ST/ Z
+308     /               ; answers is now as (x + y.j)
+309     FS?C 04
+310     X<>Y
+311     FS?C 14         ; inverse operation?
+312     XEQ 31          ;   then compute Z1 = 1 / Z1
+313     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+; TRIGONOMIC OPERATIONS HELPER subroutine
+;
+; Call with:
+;   complex number on the stack as (x + y.j).
+;   F04 indicates [HYP]
+;   F10 indicates [SIN], otherwise [COS]
+;
+; This operation returns:
+;
+;           | [HYP]    [HYP]
+;           | [SIN]    [COS]    [SIN]   [COS]
+;     ------+----------------------------------
+; re  y-reg | sin(y)   sin(y)   sin(x)  sin(x)
+; re  z-reg | cosh(x)  sinh(x)  cosh(y) sinh(y)
+;     ------+----------------------------------
+; im  x-reg | cos(y)   cos(y)   cos(x)  cos(x)
+; im  t-reg | sinh(x)  cosh(x)  sinh(y) cosh(y)
+;
+;            x     -x      2.x            
+;           e  -  e       e    -  1                    1
+; sinh(x) = ---------  =  ---------  ,    csch(x) = -------
+;                              x                    sinh(x)
+;              2            2.e            
+;
+;            x     -x      2.x
+;           e  +  e       e    +  1                   1
+; cosh(x) = ---------  =  ---------  ,    sech(x) = -------
+;                              x                    cosh(x)
+;               2           2.e
+; Reference:
+;     http://en.wikipedia.org/wiki/Hyperbolic_trig_operations
+
+314     LBL 00
+315     FS? 04          ; HYP?
+316     X<>Y            ; 
+317     2
+318     RCL Z
+319     ST+ X
+320     E^X-1
+321     ST+ Y
+322     R^
+323     E^X
+324     ST+ X
+325     ST/ Z
+326     /
+327     FS? 10          ; SIN? (not COS)
+328     X<>Y            ;
+329     R^
+330     SIN
+331     R^
+332     COS
+333     RTN
+
+; INVERSE TRIGONOMIC OPERATIONS, ARC and HYP-ARC
+;
+;     arcsin(x + y.j) = arcsin(b) + j.sign(y).ln(a + sqrt(a^2-1) 
+;     arccos(x + y.j) = arccos(b) - j.sign(y).ln(a + sqrt(a^2-1))
+;     arccsc(Z)  =    arcsin(1/Z)
+;     arcsec(Z)  =    arccos(1/Z)
+;     arcsinh(Z) = -j.arcsin(j.Z)
+;     arccosh(Z) =  j.arccos(Z)
+;     arccsch(Z) =  j.arccsc(j.Z)
+;     arcsech(Z) =  j.arcsec(Z)
+;   where 
+;     a = ( sqrt( (x+1)^2 + y^2 ) + sqrt( (x-1)^2 + y^2) ) / 2
+;     b = ( sqrt( (x+1)^2 + y^2 ) - sqrt( (x-1)^2 + y^2) ) / 2
+;     sign(y) returns 1 when y>=0, othewise returns -1
+; 
+; Flags used:
+;     F04 indicates [HYP]
+;     F10 indicates [SIN], otherwise [COS]
+;     F14 indicates inverse operation (CSC and COS, aka SIN^-1 and COS^-1]
+;
+; Reference:
+;     http://en.wikipedia.org/wiki/Inverse_trigonometric_operation
+
+334     LBL 13
+335     FS?C 14         ; inverse operation?
+336     XEQ 31          ; compute Z1 = 1 / Z1
+337     FS? 04          ; HYP flag
+338     FC? 10
+339     GTO 00
+340     X<>Y
+341     CHS
+342     LBL 00          ; entered with Z1 as (x + y.j)
+343     RCL X
+344      E
+345     ST- Z
+346     +
+347     X^2
+348     X<>Y
+349     X^2
+350     X<> Z
+351     X^2
+352     ST+ Z
+353     +
+354     SQRT
+355     STO Z
+356     X<>Y
+357     SQRT
+358     ST- Z
+359     +
+360     2
+361     ST/ Z
+362     /               ; X register holds value a;  Y register holds value b; Z register holds value y
+363     ENTER^
+364     X^2
+365     SIGN
+366     ST- L
+367     X<> L
+368     SQRT
+369     +
+370     LN
+371     R^
+372     SIGN
+373     *
+374     FC? 10
+375     CHS
+376     X<>Y
+377     FS? 10
+378     ASIN
+379     FC? 10
+380     ACOS            ; Z1 (x + y.j) now holds the answer to simple ARCSIN or ARCCOS 
+381     XEQ 61
+382     FC?C 04
+383     GTO 03          ; we're done for non-HYP operations;  copy (x + y.j) to complex stack, and return
+384     FS? 10          ; for HYP or inverse-HYP operation, there is a little more
+385     CHS 
+386     X<>Y
+387     FC? 10
+388     CHS
+389     GTO 03          ; copy (x + y.j) to complex stack, and return
+
+390     LBL 14
+391     FS?C 14
+392     XEQ 31
+393     FS? 04
+394     X<>Y
+395     FS? 04
+396     CHS
+397      E
+398     ENTER^
+399     R^
+400     ST- Z
+401     +
+402     R^
+403     ST/ Z
+404     /
+405     STO Z
+406     X^2
+407     RCL Y
+408     X^2
+409     SIGN
+410     ST+ Y
+411     ST+ L
+412     X<> L
+413     /
+414     LN
+415     4
+416     /
+417     PI
+418     R^
+419     ATAN
+420     XEQ 61
+421     R^
+422     ATAN
+423     XEQ 61
+424     +
+425     -
+426     2
+427     /
+428     FS? 04
+429     CHS
+430     FS?C 04
+431     X<>Y
+432     GTO 03
+
+; VIEW COMPLEX NUMBER Zn
+
+433     LBL 89          ; [VIEWZn] operation
+434     RCL 00
+435     X<Y?            ; if n > complex stack depth, recall Z1 and return
+436     GTO 14          ; get (x + y.j) from complex stack, and return
+437     SIGN
+438     +
+439     ST+ X
+440     SIGN
+441     CLX
+442     RCL IND L       ; recall imaginary part of Zn
+443     DSE L
+444     RCL IND L       ; recall real part of Zn
+445     FS? 00          ; if notation selected
+446     XEQ 33          ;   then convert to polar notation
+447     XEQ 10          ; display complex number (x + y.j)
+448     PSE             ; pause, but allow number input
+449     GTO 14          ; get (x + y.j) from complex stack, and return
+
+; EXCHANGE COMPLEX STACK REGISTERS
+
+450     LBL 21          ; [Z1<>Z2] operation
+451     XEQ 04          ; push (x + y.j) onto complex stack
+452     2
+453     LBL 26          ; [Z1<>Zn] operation
+454     RCL 00
+455     X<Y?
+456     GTO 14          ; get (x + y.j) from complex stack, and return
+457     X<>Y
+458     ST+ X
+459     1.003002        ; X register holds 1.003002; Y register holds 2.n, 
+460     CF 02           ; no "no stack lift"
+461     GTO 00          ; perform register swap and return
+
+; COMPLEX STACK ROLL, up or down
+;
+; Does not roll around
+; Uses block rotate trick form PPC Journal V10N3p15a
+
+462     LBL 22          ; [CR^] operation
+463     SF 10
+464     LBL 27          ; [CRDN] operation
+
+465     XEQ 04          ; push (x + y.j) onto complex stack
+466     3
+467     ENTER^
+468     5
+469     FS? 10          ; CR^?
+470     X<>Y
+471     RCL 00          ; complex stack depth (csdepth)
+472     DSE X
+473     ST+ X
+474      E3
+475     ST/ Z
+476     X^2
+477     /
+478     +               ; for CRDN, X-register holds 0.005 + 2.(csdepth-1)/1E6; Y-register holds 3
+479     LBL 00
+480     +
+481     REGSWAP         ; register swap for sss.dddnnn
+
+; GET (x + y.j) FROM COMPLEX STACK
+
+482     LBL 14
+483     RCL 04          ; imaginary part of Z1
+484     RCL 03          ; real part of Z1
+485     RTN
+
+; COMPLEX 1/Z1
+;
+; Formula:
+;      1             x                 y
+;    -------  =  ---------  -  j . ---------
+;    x + y.j     x^2 + y^2         x^2 + y^2
+;
+; doesn't disturb Z and T
+486     LBL 31
+487     X^2                     
+488     X<>Y
+489     STO M
+490     ST* X
+491     ST+ Y
+492     X<> M
+493     CHS
+494     X<>Y
+495     ST/ Y
+496     ST/ L
+497     X<> L
+498     RTN
+
+; GET TWO OPERANDS as (x + j.y) and (z + j.t), 1st operand is from keyboard, otherwise from Z1
+; stack management subroutine for operations with two complex number operands
+
+499     LBL 07
+500     XEQ 06          ; get one operand (x + y.j) from keyboard input, otherwise from Z1 on the complex stack
+501     FC?C 02
+502     FC? 22          ; if "no stack lift" or no "input from keyboard"
+503     XEQ 12          ;   then move complex stack down, Z1 < Z2 < Z3 < Z4 < Z5 < Z6
+504     RCL 04          ; get operand (z + t.j) from (what is now) Z1 on the complex stack
+505     RCL 03
+506     R^
+507     R^
+508     GTO 00
+
+; GET OPERAND, as (x + j.y) and UPDATE LASTZ
+; stack management subroutine for operations with one complex and one real number operand
+
+509     LBL 08          ; called with n in register X
+510     FS?C 02         ; if "no stack lift"
+511     XEQ 12          ;   then move complex stack down, Z1 < Z2 < Z3 < Z4 < Z5 < Z6
+512     RCL 04          ; copy Z1 to LASTZ
+513     STO 02
+514     RCL 03
+515     STO 01
+516     RCL Z           ; n in register X, complex operand as (y + z.j)
+517     RTN
+
+; PUSH (x + y.j) ONTO COMPLEX STACK and UPDATE LASTZ
+; stack management subroutine for operations with one complex number operand
+
+518     LBL 09
+519     XEQ 04          ; push (x + y.j) onto complex stack
+520     LBL 00
+521     STO 01          ; copy to LASTZ1
+522     X<>Y
+523     STO 02
+524     X<>Y
+525     RTN
+
+; COMPLEX ALPHA/ALPHA ROUTINE
+
+526     LBL 04          ; [CVIEW] key code [ALPHA]
+527     FC?C 02
+528     FC? 22
+529     FS? 30          ; if both "no stack lift" and "keyboard input"
+530     XEQ 11          ;   then move complex stack up, Z1 > Z2 > Z3 > Z4 > Z5 > Z6
+
+531     XEQ 06          ; get one operand (x + y.j) from keyboard input, otherwise from Z1 on the complex stack
+532     STO 03
+533     X<>Y
+534     STO 04
+535     X<>Y
+536     RTN
+
+; GET ONE OPERAND (x + y.j) from keyboard input, otherwise from Z1 on the complex stack 
+
+537     LBL 06
+538     FS? 00          ; if keyboard input in polar mode, then convert it to Rectangular
+539     FC? 22
+540     FS? 30
+541     P-R
+542     FS? 22          ; keyboard input?
+543     RTN
+544     RCL 04
+545     RCL 03
+546     RTN
+
+; DISPLAY, in rectangular mode "x + y.j", or in polar mode "x <y" with the angle in degrees
+; subroutine that views both parts of the complex number in X and Y in condensed format
+; in the display, without disturbing Z, T or the display mode.  ENG 2 was chosen because, to
+; display complex numbers in analog electronics.
+
+547     LBL 10          ; Z1 = x + j.y
+548     SIGN            ; save X in LASTX
+549     RDN
+550     CLA
+551     RCLFLAG         ; save flags
+552     FIX 2
+553     ARCL L
+554     RDN
+555     FS? 00          ; in Rectangular notation append real part,
+556     GTO 00          ; and '+' sign if imaginary part is positive
+557     X<0?
+558     GTO 00
+559     >"+"
+560     LBL 00
+561     R^
+562     FS? 00          ; for Polar notation, append angle ('<') sign
+563     >"<"
+564     ARCL Y
+565     FC? 00
+566     >"J"            ; in Rectangular notation append 'J' char
+567     AVIEW
+568     STOFLAG         ; restore flags
+569     X<> L           ; restore X from LASTX
+570     RTN
+
+; ROLL THE COMPLEX STACK, by one position up or down
+; subroutine to shift the stack up or down by one complex register
+;
+; Does not roll around like RDN or R^
+; Does not enter or retrieve data.
+;
+; Example:
+;                  | stack lift | stack drop
+;    --------------+------------+------------
+;    Z6    6 + 6j  |   5 + 5j   |   6 + 6j
+;    Z5    5 + 5j  |   4 + 4j   |   6 + 6j
+;    Z4    4 + 4j  |   3 + 3j   |   5 + 5j
+;    Z3    3 + 3j  |   2 + 2j   |   4 + 4j
+;    Z2    2 + 2j  |   1 + 1j   |   3 + 3j
+;    Z1    1 + 1j  |   1 + 1j   |   2 + 2j
+
+571     LBL 11          ; stack lift, Z1 > Z2 > Z3 > Z4 > Z5 > Z6
+572     3.005           ;   typically when a new number is moved into Z1
+573     GTO 00
+574     LBL 12          ; stack drop, Z1 < Z2 < Z3 < Z4 < Z5 < Z6
+575     5.003           ;   typically when a operation combines Z1 and Z2
+576     LBL 00
+577     SIGN
+578     RCL 00          ; complex stack depth (csdepth)
+579     X<>Y
+580     ST- Y
+581     RDN
+582     ST+ X
+583      E6
+584     ST/ Y
+585     X<> L
+586     +               ; register X is in sss.dddnnn format
+587     REGMOVE         ; copies 2*(csdepth-1) registers from sss to ddd
+588     RDN
+589     RTN
+
+590     LBL 33
+591     R-P
+592     LBL 61
+593     R^
+594     STO N
+595     R^
+596     STO M
+597     RDN
+598     X<> Z
+599     PI
+600     +
+601     PI
+602     +
+603     RCL 15
+604     X<>Y
+605     LBL 38
+606     X<Y?
+607     GTO 00
+608     PI
+609     -
+610     PI
+611     -
+612     GTO 38
+
+613     LBL 00
+614     RCL Z
+615     RCL N
+616     RCL M
+617     R^
+618     R^
+619     RTN
+
+; ADJUST BRANCH CUT
+
+620     LBL 35		; [BCUT]
+621     RCL 15
+622     "BC<="
+623     ARCL X 
+624     >"?"
+625     PROMPT
+626     STO 15
+627     R^
+628     R^
+629     END 

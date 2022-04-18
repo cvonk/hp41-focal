@@ -1,0 +1,46 @@
+;       /-----------------------------------------------------------\
+;       |   C  O  M  P  L  E  X      A  R  I  T  H  M  E  T  I  C   |
+;       |                                                           |
+;       |                    for the HP-41                          |
+;       \-----------------------------------------------------------/
+;
+;                                3.00
+;                            by Coert Vonk
+;
+; https://coertvonk.com/technology/hp41/complex-arithmetic-xmem-4426
+;
+; The program consists of two parts.  The part listed below should be
+; in main memory.  The other part (listed in CA300xm.txt) can be
+; placed in either main or extended memory.  When placed in extended
+; memory, THE INSTRUCTION GTO "X" SHOULD BE REMOVED.
+
+; Before placing the second part in XM, the program should be PACKed
+; and run in RAM.  This should be done to compile all the GTO's and
+; XEQ's.  If this is not done one will see CHKSUM ERR when trying to
+; download this program into RAM. [9]
+
+1	LBL "CA"
+2	CF 03		; clear prefix flags (ARC, HYP)
+3	CF 04		
+4	RAD
+5	FS? 14		; if the "do not clear stack" flag is set
+6	GTO 00		;   then jump to LBL 00,
+7	SIZE?		;   else if needed extended the # of data registers
+8	6
+9	STO 00
+10	ST+ X
+11	3
+12	+
+13	X>Y?
+14	PSIZE
+15	CLX
+16	STO 01		; clear LASTZ
+17	STO 02
+18	LBL 00
+19	GTO "X"		; REMOVE THIS LINE when the remainder of the program is placed in X-memory !!
+20	"\8D\BE"	; 8th byte, D block, register BE 
+21	RCL M
+22	STO b		; jump to "X" in extended memory at address 0x8DBE
+22	END
+
+; continue reading at CA300xm.txt

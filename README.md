@@ -1,4 +1,9 @@
 # hp41-focal
+
+[![GitHub Discussions](https://img.shields.io/github/discussions/cvonk/hp41-focal)](https://github.com/cvonk/hp41-focal/discussions)
+![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/cvonk/hp41-focal)
+![GitHub](https://img.shields.io/github/license/cvonk/hp41-focal)
+
 Focal Programs such as Complex Math for HP-41cv/cx Calculators
 
 Files types:
@@ -11,6 +16,3 @@ Files types:
 * `*.rom` are ROM images
 
 [Continue reading at coertvonk.com](http://www.coertvonk.com/technology/hp41/)
-
-(c) Copyright 2015, Coert Vonk
-All rights reserved
